@@ -3,7 +3,6 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import os
-import copy
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -200,9 +199,7 @@ class AgentPPO:
                     # optimizer step
                     self.optimizer.step()
 
-                    self._write_stats(iteration, iterations, actor_loss, critic_loss, entropy_loss, loss)
-
-                           
+            self._write_stats(iteration, iterations, actor_loss, critic_loss, entropy_loss, loss)            
         self.writer.close()
 
 
