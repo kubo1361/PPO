@@ -1,7 +1,5 @@
 import gym
 import numpy as np
-import matplotlib.pyplot as plt
-
 
 class SkipEnv(gym.Wrapper):
     def __init__(self, env=None, skip=4):

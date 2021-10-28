@@ -3,6 +3,7 @@ import torch
 import torch.nn.functional as F
 import torch.optim as optim
 import os
+import keyboard
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -58,15 +59,17 @@ class AgentPPO:
         torch.save(self.model.state_dict(), path)
 
 
-    def train(self, workers, iterations, steps, epochs=4, observations_per_epoch=4):
+    def train(self, workers, episodes, steps, epochs=4, observations_per_epoch=4, 
+              start_episode=0, start_score=0, start_steps=0):
         self.model.train()
         
         # initial variables
-        self.average_score = []
-        self.average_steps = []
+        self.average_score = [start_score]
+        self.average_steps = [start_steps]
         new_observations = []
-        self.best_avg = 0
-        self.episodes = 0 
+        self.best_avg = start_score * 1.2
+        self.episodes = start_episode 
+        iteration = 0
         len_workers = len(workers)
 
         all_epochs_per_iteration = steps * epochs
@@ -79,14 +82,15 @@ class AgentPPO:
 
         self.writer.add_graph(self.model, new_observations)
 
-        for iteration in range(iterations):
-            iter_critic_values = torch.zeros([all_epochs_per_iteration, len_workers, 1]).type(torch.cuda.FloatTensor)
-            iter_actor_log_probs = torch.zeros([all_epochs_per_iteration, len_workers, 1]).type(torch.cuda.FloatTensor)
-            iter_actions = torch.zeros([all_epochs_per_iteration, len_workers, 1]).type(torch.cuda.FloatTensor)
-            iter_rewards = torch.zeros([all_epochs_per_iteration, len_workers, 1]).type(torch.cuda.FloatTensor)
-            iter_not_terminated = torch.ones([all_epochs_per_iteration, len_workers, 1]).type(torch.cuda.FloatTensor)
-            raw_advantages = torch.zeros([all_epochs_per_iteration, len_workers, 1]).type(torch.cuda.FloatTensor)
-            diff_advantages = torch.zeros([all_epochs_per_iteration, len_workers, 1]).type(torch.cuda.FloatTensor)
+        while(True):
+            iteration = iteration + 1
+            iter_critic_values = torch.zeros([all_epochs_per_iteration, len_workers, 1]).to(self.device)
+            iter_actor_log_probs = torch.zeros([all_epochs_per_iteration, len_workers, 1]).to(self.device)
+            iter_actions = torch.zeros([all_epochs_per_iteration, len_workers, 1]).to(self.device)
+            iter_rewards = torch.zeros([all_epochs_per_iteration, len_workers, 1]).to(self.device)
+            iter_not_terminated = torch.ones([all_epochs_per_iteration, len_workers, 1]).to(self.device)
+            raw_advantages = torch.zeros([all_epochs_per_iteration, len_workers, 1]).to(self.device)
+            diff_advantages = torch.zeros([all_epochs_per_iteration, len_workers, 1]).to(self.device)
             old_observations = []
 
 
@@ -199,51 +203,59 @@ class AgentPPO:
                     # optimizer step
                     self.optimizer.step()
 
-            self._write_stats(iteration, iterations, actor_loss, critic_loss, entropy_loss, loss)            
-        self.writer.close()
+            self._write(iteration, actor_loss, critic_loss, entropy_loss, loss)
+
+ 
+            if keyboard.is_pressed('enter'):
+                print ('Interrupted, Saving model.')
+                model_filename = (self.model_path + self.name + '_' + str(self.id) + '_end' + '.pt')
+                self.save_model(model_filename)
+                self.writer.close()
+                return
+
+            if (episodes == self.episodes):
+                self.writer.close()
+                return   
+        
 
 
-    def _write_stats(self, iteration, iterations, actor_loss, critic_loss, entropy_loss, loss):
+    def _write(self, iteration, actor_loss, critic_loss, entropy_loss, loss):
          # stats
-        if iteration % (iterations / 1000) == 0 and iteration > 0:
-
+        if iteration % 10 == 0 and iteration > 0:
             # average for last 100 scores
             avg_score = np.average(self.average_score[-100:])
             avg_steps = np.average(self.average_steps[-100:])
 
+            # save model on new best average score
+            if avg_score > self.best_avg:
+                self.best_avg = avg_score
+                print('Best model save, episode: ', self.episodes, ' score: ',
+                      self.best_avg)
+                model_filename = (
+                    self.model_path + self.name + '_' + str(self.id) + '_best.pt')
+                self.save_model(model_filename)
+
+        if iteration % 50 == 0 and iteration > 0:
             # lower learning rate
             self.lr = max(self.lr - self.lr_decay, 1e-7)
             self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
 
-            # save model on new best average score
-            if avg_score > self.best_avg:
-                self.best_avg = avg_score
-                print('Saving model, best score is: ', self.best_avg)
-                model_filename = (
-                    self.model_path + self.name + '_' + str(self.id) + '.pt')
-                self.save_model(model_filename)
-
-        if iteration % (iterations / 100) == 0 and iteration > 0:
-
             # display informations
-            print('iteration: ', iteration, '\tepisodes: ',
+            print('episodes: ',
                     self.episodes, '\taverage steps: ', avg_steps, '\taverage score: ', avg_score)
 
             # write to tensorboard
-            self.writer.add_scalar('Episodes per iteration',
-                    self.episodes, iteration)
+            self.writer.add_scalar('Actor loss',
+                    actor_loss.item(), self.episodes)
 
-            self.writer.add_scalar('Actor loss per iteration',
-                    actor_loss.item(), iteration)
+            self.writer.add_scalar('Critic loss',
+                    critic_loss.item(), self.episodes)
 
-            self.writer.add_scalar('Critic loss per iteration',
-                    critic_loss.item(), iteration)
+            self.writer.add_scalar('Entropy loss',
+                    entropy_loss.item(), self.episodes)
 
-            self.writer.add_scalar('Entropy loss per iteration',
-                    entropy_loss.item(), iteration)
-
-            self.writer.add_scalar('Final loss per iteration',
-                    loss.item(), iteration)
+            self.writer.add_scalar('Final loss',
+                    loss.item(), self.episodes)
 
             self.writer.add_scalar('Average steps per 100 episodes',
                     avg_steps, self.episodes)
@@ -251,10 +263,13 @@ class AgentPPO:
             self.writer.add_scalar('Average score per 100 episodes',
                     avg_score, self.episodes)
 
-        if iteration % (iterations / 10) == 0 and iteration > 0:
+        if iteration % 500 == 0 and iteration > 0:
+            self.average_score = self.average_score[-100:]
+            self.average_steps = self.average_steps[-100:]
             continuous_save_model_filename = (
-                self.model_path + self.name + '_' + str(self.id) + '_' + str(iteration) + '.pt')
+                self.model_path + self.name + '_' + str(self.id) + '_' + str(self.episodes) + '.pt')
             self.save_model(continuous_save_model_filename)
+            print('Periodic model save, episode: ', self.episodes)
 
 
 
