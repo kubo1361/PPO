@@ -41,27 +41,31 @@ class Agent:
 
 
 def play():
-    path = 'models/{name}/{name}_{id}_{suffix}.pt'.format(name = 'test_pacman', id=0, suffix='end')
-    actions = 5
+    path = 'models/{name}/{name}_{id}_{suffix}.pt'.format(name = 'cartpole', id=0, suffix='best')
+    actions = 2
     agent = Agent(network(actions))
     agent.load_model(path)
 
-    env = gym.make('MsPacman-v0')
+    env = gym.make('CartPole-v1')
     init = env.reset()
-    init = transform_observation(init)
+    # init = transform_observation(init)
     done = False
     action_ai = 0
     observations = np.zeros((4, 80, 80), dtype=np.float32)
     switch = True
     while True:
         while not done:
+            """
             for _ in range(4):
-                env.render()
-                obs, _, done, _ = env.step(action_ai)
-                switch = not switch
+            """
+            env.render()
+            obs, _, done, _ = env.step(action_ai)
+            # switch = not switch
+            """
             observations[:-1] = observations[1:]
             observations[-1] = transform_observation(obs)
-            action_ai = agent.choose_action(torch.from_numpy(observations))
+            """
+            action_ai = agent.choose_action(torch.from_numpy(obs))
             time.sleep(1 / 60)  # FPS
         env.reset()
         done = False

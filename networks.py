@@ -12,7 +12,7 @@ class network(nn.Module):
     def __init__(self, actions_count):
         super(network, self).__init__()
         self.actions_count = actions_count
-
+        """
         self.conv1s = nn.Conv2d(4, 32, 3, stride=2, padding=1)  # B, CH, H, W
         self.attention_layer = MultiHeadAttention(32)
         self.conv2s = nn.Conv2d(32, 64, 3, stride=2, padding=1)
@@ -20,16 +20,17 @@ class network(nn.Module):
         self.conv4s = nn.Conv2d(64, 64, 3, stride=2, padding=1)
         self.conv5s = nn.Conv2d(64, 64, 3, stride=1, padding=1)
         self.conv6s = nn.Conv2d(64, 32, 3, stride=1, padding=1)
+        """
+        self.fca1 = nn.Linear(4, 128)
+        self.fcc1 = nn.Linear(4, 128)
 
-        self.fca1 = nn.Linear(5 * 5 * 32, 512)
-        self.fcc1 = nn.Linear(5 * 5 * 32, 512)
-
-        self.fca2 = nn.Linear(512, actions_count)
-        self.fcc2 = nn.Linear(512, 1)
+        self.fca2 = nn.Linear(128, actions_count)
+        self.fcc2 = nn.Linear(128, 1)
 
         self.apply(weights_init_xavier)
 
     def forward(self, x):
+        """
         x = F.relu(self.conv1s(x))
 
         x = self.attention_layer(x, x, x)
@@ -41,7 +42,7 @@ class network(nn.Module):
         x = F.relu(self.conv6s(x))
 
         x = x.flatten(start_dim=1)
-
+        """
         x_a = F.relu(self.fca1(x))
         x_c = F.relu(self.fcc1(x))
 

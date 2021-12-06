@@ -223,7 +223,7 @@ class AgentPPO:
             self._write(iteration, actor_loss, critic_loss, entropy_loss, loss)
 
  
-            if keyboard.is_pressed('home') or (episodes == self.episodes):
+            if keyboard.is_pressed('home') or (episodes >= self.episodes):
                 self._write(iteration, actor_loss, critic_loss, entropy_loss, loss, end=True)
                 return
         
