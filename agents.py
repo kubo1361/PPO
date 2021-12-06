@@ -4,6 +4,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import os
 import keyboard
+import json
 
 from torch.utils.tensorboard import SummaryWriter
 
@@ -58,17 +59,33 @@ class AgentPPO:
     def save_model(self, path):
         torch.save(self.model.state_dict(), path)
 
+    def save_progress(self, path, steps, score):
+        progress = {'episode' : self.episodes, 'average_steps' : steps, 'average_score' : score
+            , 'learning_rate' : self.lr}
+        with open(path, 'w') as f:
+            json.dump(progress, f)
+            f.close()
+
+    def load_progress(self, path):
+        with open(path, 'r') as f:
+            progress = eval(f.read())
+            f.close()
+        return progress
+
+
 
     def train(self, workers, episodes, steps, epochs=4, observations_per_epoch=4, 
-              start_episode=0, start_score=0, start_steps=0):
+              start_episode=0, start_score=0, start_steps=0, lr=0.0001):
         self.model.train()
         
         # initial variables
-        self.average_score = [start_score]
-        self.average_steps = [start_steps]
+        self.average_score = [start_score] * 100
+        self.average_steps = [start_steps] * 100
         new_observations = []
-        self.best_avg = start_score * 1.2
+        self.best_avg = start_score * 1.1
         self.episodes = start_episode 
+        self.lr = lr
+        self.optimizer = optim.Adam(self.model.parameters(), lr=self.lr)
         iteration = 0
         len_workers = len(workers)
 
@@ -206,27 +223,20 @@ class AgentPPO:
             self._write(iteration, actor_loss, critic_loss, entropy_loss, loss)
 
  
-            if keyboard.is_pressed('enter'):
-                print ('Interrupted, Saving model.')
-                model_filename = (self.model_path + self.name + '_' + str(self.id) + '_end' + '.pt')
-                self.save_model(model_filename)
-                self.writer.close()
+            if keyboard.is_pressed('home') or (episodes == self.episodes):
+                self._write(iteration, actor_loss, critic_loss, entropy_loss, loss, end=True)
                 return
-
-            if (episodes == self.episodes):
-                self.writer.close()
-                return   
         
 
 
-    def _write(self, iteration, actor_loss, critic_loss, entropy_loss, loss):
+    def _write(self, iteration, actor_loss, critic_loss, entropy_loss, loss, end=False):
          # stats
-        if iteration % 10 == 0 and iteration > 0:
-            # average for last 100 scores
-            avg_score = np.average(self.average_score[-100:])
-            avg_steps = np.average(self.average_steps[-100:])
+         # average for last 100 scores
+        avg_score = np.average(self.average_score[-100:])
+        avg_steps = np.average(self.average_steps[-100:])
 
-            # save model on new best average score
+        if iteration % 10 == 0 and iteration > 0:
+                        # save model on new best average score
             if avg_score > self.best_avg:
                 self.best_avg = avg_score
                 print('Best model save, episode: ', self.episodes, ' score: ',
@@ -271,6 +281,17 @@ class AgentPPO:
             self.save_model(continuous_save_model_filename)
             print('Periodic model save, episode: ', self.episodes)
 
+        if end:
+            print('Training ended, Saving progress.')
+            print('Episode: ',
+                    self.episodes, '\tAverage steps: ', avg_steps, '\tAverage score: ', avg_score,
+                    '\tLearning_rate: ', self.lr)
+            self.save_progress(self.model_path + 'progress.json', avg_steps, avg_score)
+            print ('Saving model.')
+            model_filename = (self.model_path + self.name + '_' + str(self.id) + '_end' + '.pt')
+            self.save_model(model_filename)
+            self.writer.close()
+            
 
 
 

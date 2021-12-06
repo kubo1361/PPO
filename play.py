@@ -6,10 +6,7 @@ from networks import network
 import torch.nn.functional as F
 import time
 
-from IPython.display import Image
 import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-from PIL import ImageTk
 
 
 class Agent:
@@ -32,25 +29,21 @@ class Agent:
 
         # we do not compute gradients when choosing actions, hence no_grad
         with torch.no_grad():
-            outActor, _ = self.model(observation)
-
-        # transform output of forward pass, so probabilities will all add up to 1
-        probs = F.softmax(outActor, dim=-1)
+            _, _, actions = self.model(observation)
 
         # transfer to CPU after calculation
-        probs = probs.cpu()
+        actions = actions.cpu()
 
         # sort probabilities
-        actions = probs.multinomial(num_samples=1)
 
         # return highest probability
-        return actions[0].item()  # TODO extract confidence
+        return actions[0].item()
 
 
 def play():
-    path = 'models/final/final_2_a2c.pt'
+    path = 'models/{name}/{name}_{id}_{suffix}.pt'.format(name = 'test_pacman', id=0, suffix='end')
     actions = 5
-    agent = Agent(networkV2(actions))
+    agent = Agent(network(actions))
     agent.load_model(path)
 
     env = gym.make('MsPacman-v0')
@@ -75,9 +68,9 @@ def play():
 
 
 def play2():
-    path = 'models/finalfinal/final_2_a2c.pt'
+    path = 'models/{name}/{name}_{id}_{suffix}.pt'.format(name = 'test_pacman', id=0, suffix='end')
     actions = 5
-    agent = Agent(networkV2(actions))
+    agent = Agent(network(actions))
     agent.load_model(path)
 
     env = make_env('MsPacman-v0', 4)
@@ -105,6 +98,6 @@ def trans_obs():
 
 
 if __name__ == '__main__':
-    # play()
+    play()
     
     # trans_obs()

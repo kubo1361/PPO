@@ -15,11 +15,8 @@ def train():
     name = "test_pacman"
     id = 0
 
-    goal_episodes = 20000
-    start_episode=0
-    start_steps=0
-    start_score=0
-
+    goal_episodes = 300000
+    
     agent = AgentPPO(name=name, model=network(actions), id=id)
 
     workers = []
@@ -28,15 +25,21 @@ def train():
         env.seed(id_w)
         w = Worker(id_w, env, agent, print_score=False)
         workers.append(w)
+    
+    model_path = 'models/{name}/{name}_{id}_{suffix}.pt'.format(name = name, id=id, suffix='218333')
+    agent.load_model(model_path)
+    
+    progress_path = 'models/{name}/progress.json'.format(name = name)
+    progress = agent.load_progress(progress_path)
+    start_episode=progress['episode']
+    start_steps=progress['average_steps']
+    start_score=progress['average_score']
+    learning_rate = progress['learning_rate']
 
-    path = 'models/{name}/{name}_{id}_{suffix}.pt'.format(name = name, id=id, suffix='best')
-    agent.load_model(path)
     agent.train(workers=workers, episodes=goal_episodes, steps=steps, 
             epochs=epochs, observations_per_epoch=observations_per_epoch, 
             start_episode=start_episode, start_score=start_score, 
-            start_steps=start_steps)
-
-    
+            start_steps=start_steps, lr=learning_rate)    
 
 if __name__ == '__main__':
     train()
