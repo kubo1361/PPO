@@ -4,8 +4,9 @@ from workers import Worker
 from gym_wrapper import make_env
 
 
+# Main training method
 def train():
-    # train
+    # Initial parameters
     actions = 5
     workers_len = 25
     stack = 4
@@ -17,8 +18,10 @@ def train():
 
     goal_episodes = 300000
     
+    # Create agent
     agent = AgentPPO(name=name, model=network(actions), id=id)
 
+    # Create workers and environments
     workers = []
     for id_w in range(workers_len):
         env = make_env('MsPacman-v0', stack)
@@ -26,6 +29,7 @@ def train():
         w = Worker(id_w, env, agent, print_score=False)
         workers.append(w)
     
+    # Load model (we trained with interruptions)
     model_path = 'models/{name}/{name}_{id}_{suffix}.pt'.format(name = name, id=id, suffix='218333')
     agent.load_model(model_path)
     
@@ -36,6 +40,7 @@ def train():
     start_score=progress['average_score']
     learning_rate = progress['learning_rate']
 
+    # Train
     agent.train(workers=workers, episodes=goal_episodes, steps=steps, 
             epochs=epochs, observations_per_epoch=observations_per_epoch, 
             start_episode=start_episode, start_score=start_score, 

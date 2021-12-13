@@ -1,6 +1,7 @@
 import gym
 import numpy as np
 
+# Wrappers to simplify our environment
 class SkipEnv(gym.Wrapper):
     def __init__(self, env=None, skip=4):
         super(SkipEnv, self).__init__(env)

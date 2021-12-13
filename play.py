@@ -8,7 +8,7 @@ import time
 
 import matplotlib.pyplot as plt
 
-
+# Simplified agent for visual testing.
 class Agent:
     def __init__(self, model):
         # init vars
@@ -39,7 +39,7 @@ class Agent:
         # return highest probability
         return actions[0].item()
 
-
+# Default method for agent play with render.
 def play():
     path = 'models/{name}/{name}_{id}_{suffix}.pt'.format(name = 'test_pacman', id=0, suffix='end')
     actions = 5
@@ -66,7 +66,7 @@ def play():
         env.reset()
         done = False
 
-
+"""
 def play2():
     path = 'models/{name}/{name}_{id}_{suffix}.pt'.format(name = 'test_pacman', id=0, suffix='end')
     actions = 5
@@ -84,7 +84,7 @@ def play2():
         action_ai = agent.choose_action(torch.from_numpy(obs))
         score += reward
         print(score)
-
+"""
 
 def trans_obs():
     env = gym.make('MsPacman-v0')

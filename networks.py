@@ -3,11 +3,13 @@ import torch.nn.functional as F
 import torch.nn.init as init
 import torch
 
+# Initialize weight to default value
 def weights_init_xavier(m):
     classname = m.__class__.__name__
     if classname.find('Conv') != -1 or classname.find('Linear') != -1:
         init.xavier_uniform_(m.weight)
 
+# Our network topology
 class network(nn.Module):
     def __init__(self, actions_count):
         super(network, self).__init__()
@@ -54,6 +56,7 @@ class network(nn.Module):
 
         return outActor, outCritic, action
 
+# Multiheaded attention to suplement our Convolution layers (SAN architecture)
 class MultiHeadAttention(nn.Module):
     def __init__(self, size):
         super().__init__()

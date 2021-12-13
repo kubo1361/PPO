@@ -8,7 +8,7 @@ import json
 
 from torch.utils.tensorboard import SummaryWriter
 
-
+# PPO implementation
 class AgentPPO:
     def __init__(self, name, model, gamma=0.99, lr=0.0001, beta_entropy=0.01, critic_loss_coef=0.5, grad_clip=0.1, epsilon=0.2, lr_decay=1e-7, id=0):
         # init vars
@@ -223,7 +223,7 @@ class AgentPPO:
             self._write(iteration, actor_loss, critic_loss, entropy_loss, loss)
 
  
-            if keyboard.is_pressed('home') or (episodes == self.episodes):
+            if keyboard.is_pressed('home') or (episodes <= self.episodes):
                 self._write(iteration, actor_loss, critic_loss, entropy_loss, loss, end=True)
                 return
         

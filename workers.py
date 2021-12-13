@@ -1,3 +1,4 @@
+# Custom reward function
 def reward_func(r):
     if r > 1:
         return 1
@@ -6,6 +7,7 @@ def reward_func(r):
     return r
 
 
+# Worker class. Enables training of 1 model in multiple instances of the same environment.
 class Worker:
     def __init__(self, id, env, agent, print_score=False, reward_function=reward_func):
         self.id = id
@@ -19,6 +21,7 @@ class Worker:
         self.agent = agent
         self.reward_function = reward_function
 
+    # Override for reset of environment + stats.
     def reset(self):
         if self.print_score and self.episode % 10 == 0:
             print('worker: ', self.id, '\tepisode: ',
@@ -32,6 +35,7 @@ class Worker:
         self.steps = 0
         return self.observation
 
+    # Override for step in environment + stats.
     def step(self, action):
         self.observation, reward, terminate, _ = self.env.step(action)
         self.score += reward
